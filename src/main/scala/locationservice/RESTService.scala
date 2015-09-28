@@ -1,6 +1,7 @@
 package locationservice
 
 import akka.actor.{Props, Actor}
+import spray.json.{JsString, JsObject}
 import spray.routing.HttpService
 
 class RESTServiceActor extends Actor with RESTService {
@@ -11,10 +12,14 @@ class RESTServiceActor extends Actor with RESTService {
 }
 
 trait RESTService extends HttpService {
+
   def LocationRoute =
-    path("LocationService" / Segment) { address =>
+    path("LocationService") {
       requestContext =>
-        val elevationService = actorRefFactory.actorOf(Props(new LocationService(requestContext)))
-        elevationService ! LocationService.Process(address)
+        val locationService = actorRefFactory.actorOf(Props(new LocationService(requestContext)))
+        val headers = requestContext.request.headers
+        val strAddress = headers.map(h => h.name -> h.value).toMap.get("address").get
+        val address = new JsString(strAddress)
+        locationService ! LocationService.Process(new JsObject(Map("address" -> address)))
     }
 }
